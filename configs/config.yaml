@@ -1,0 +1,13 @@
+defaults:
+  - dataset: hymenoptera
+  - model: dinov3
+  - server: default
+  - tracking: mlflow
+  - _self_
+
+seed: 42
+debug: false
+project_name: "hymenoptera_dinov3_cls"
+
+# Default stage for hydra to know about the stage keyword
+stage: download 

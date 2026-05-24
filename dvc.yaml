@@ -1,0 +1,16 @@
+stages:
+  download_data:
+    cmd: uv run python src/scripts/run_stage.py stage=download
+    deps:
+      - src/scripts/download.py
+      - src/scripts/run_stage.py
+    outs:
+      - data/raw/
+  preprocess:
+    cmd: uv run python src/scripts/run_stage.py stage=preprocess
+    deps:
+      - src/scripts/preprocess.py
+      - src/scripts/run_stage.py
+      - data/raw/
+    outs:
+      - data/preprocessed/

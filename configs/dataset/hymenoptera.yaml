@@ -1,0 +1,54 @@
+name: "hymenoptera"
+kaggle_id: "thedatasith/hymenoptera"
+raw_dir: "data/raw"
+preprocessed_dir: "data/preprocessed"
+
+classes:
+  bees: 1
+  ants: 0
+
+splits:
+  train: "train"
+  test: "val"
+
+df:
+  train: "train_df.parquet"
+  val: "val_df.parquet"
+  test: "test_df.parquet"
+
+split:
+  val_samples_per_class: 25
+
+batch_size: 16
+num_workers: 4
+pin_memory: false
+
+transforms:
+  img_size: 256
+  mean: [0.485, 0.456, 0.406]
+  std: [0.229, 0.224, 0.225]
+
+  train:
+    # RandomResizedCrop
+    crop_scale: [0.7, 1.0]
+
+    # RandomHorizontalFlip
+    flip_p: 0.7
+
+    # RandomRotation
+    rotation_degrees: 15
+
+    # ColorJitter
+    jitter_brightness: 0.4
+    jitter_contrast: 0.4
+    jitter_saturation: 0.4
+    jitter_hue: 0.1
+
+    # RandomGrayscale
+    grayscale_p: 0.3
+
+    # GaussianBlur
+    blur_kernel: [23, 23]
+    blur_sigma: [0.1, 2.5]
+
+  val: {}

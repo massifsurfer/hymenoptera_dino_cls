@@ -1,0 +1,41 @@
+schema: '2.0'
+stages:
+  download_data:
+    cmd: uv run python src/scripts/run_stage.py stage=download
+    deps:
+    - path: src/scripts/download.py
+      hash: md5
+      md5: 4e96355c7af1ec1096b7853941fda368
+      size: 664
+    - path: src/scripts/run_stage.py
+      hash: md5
+      md5: 7c9491a6da3805da6d7fccff5fc678eb
+      size: 491
+    outs:
+    - path: data/raw/
+      hash: md5
+      md5: 4680d7d3a6dcdf491cdb9dd3050960cc.dir
+      size: 47950717
+      nfiles: 401
+  preprocess:
+    cmd: uv run python src/scripts/run_stage.py stage=preprocess
+    deps:
+    - path: data/raw/
+      hash: md5
+      md5: 4680d7d3a6dcdf491cdb9dd3050960cc.dir
+      size: 47950717
+      nfiles: 401
+    - path: src/scripts/preprocess.py
+      hash: md5
+      md5: fe1058194ac91e265e7ee422cfd590f5
+      size: 2356
+    - path: src/scripts/run_stage.py
+      hash: md5
+      md5: 7c9491a6da3805da6d7fccff5fc678eb
+      size: 491
+    outs:
+    - path: data/preprocessed/
+      hash: md5
+      md5: 8497f3630a44358381a8d49cb9b709bd.dir
+      size: 9215
+      nfiles: 3

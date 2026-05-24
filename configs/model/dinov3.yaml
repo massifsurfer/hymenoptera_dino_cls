@@ -1,0 +1,23 @@
+task: "binary"
+max_epochs: 3
+device: "cpu"
+mixed_precision: "fp16"
+checkpoint_dir: "checkpoints"
+threshold: 0.5
+
+architecture:
+  backbone: "vit_small_patch16_dinov3.lvd1689m"
+  pretrained: true
+  features_only: false
+  freeze_backbone: true
+
+optimizer:
+  name: "AdamW"
+  lr: 5e-4
+  weight_decay: 0.05
+
+scheduler:
+  name: "cosine"
+  warmup_epochs: 3
+
+accelerator: "cpu"

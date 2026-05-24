@@ -216,3 +216,18 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# notebooks
+*.ipynb
+
+
+# Hydra outputs
+outputs/
+multirun/
+
+# MLFlow deps
+*.db
+mlruns/
+
+# Model artifacts
+checkpoints/
