@@ -9,3 +9,4 @@ onnx_registered_model_name: "Hymenoptera_DINOv3_CLS_ONNX"
 host: "127.0.0.1"
 port: "8080"
 model_uri: "models:/Hymenoptera_DINOv3_CLS_ONNX/latest"
+allowed_types: ["jpg", "jpeg", "png"]

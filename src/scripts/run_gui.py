@@ -27,15 +27,15 @@ def run_streamlit_server(cfg):
     st.title("HymenopteraDINOv3🐜🐝🦖\nImage classificator")
 
     transform = get_val_transform(cfg.dataset.transforms)
-    endpoint = "http://127.0.0.1:8080/invocations"
+    endpoint = f"http://{cfg.tracking.host}:{cfg.tracking.port}/invocations"
 
     uploaded_file = st.file_uploader(
-        "Выбери изображение...", type=["jpg", "jpeg", "png"]
+        "Выбери изображение...", type=list(cfg.tracking.allowed_types)
     )
 
     if uploaded_file is not None:
         image = Image.open(uploaded_file).convert("RGB")
-        st.image(image, caption="Загрузить картинку", use_container_width=True)
+        st.image(image, caption="Загруженная картинка", use_container_width=True)
 
         if st.button("Предсказать класс 🔮🧙", type="primary"):
             with st.spinner("Запрос отправлен..."):
