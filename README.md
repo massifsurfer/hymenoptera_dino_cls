@@ -93,6 +93,39 @@ Detection in Ants and Bees Images](https://mail.joiv.org/index.php/joiv/article/
 `uv run src/train.py` - strat training process with the parameters given in the hydra config sections *dataset* and *model*.
 
 ## Overall
+Project's structure:
+.
+├── src
+│   ├── data
+│   │   ├── datamodules.py
+│   │   ├── datasets.py
+│   │   └── transforms.py
+│   ├── model
+│   │   └── models.py
+│   ├── scripts
+│   │   ├── download.py
+│   │   ├── preprocess.py
+│   │   ├── run_gui.py
+│   │   ├── run_server.py
+│   │   └── run_stage.py
+│   └── train.py
+├── configs
+│   ├── config.yaml
+│   ├── dataset
+│   │   └── hymenoptera.yaml
+│   ├── model
+│   │   └── dinov3.yaml
+│   ├── server
+│   │   └── default.yaml
+│   └── tracking
+│       └── mlflow.yaml
+├── data
+├── dvc.lock
+├── dvc.yaml
+├── LICENSE
+├── pyproject.toml
+├── README.md
+└── uv.lock
 ### MLFlow serving
 `uv run src/scripts/run_server` - run MLFlow Serving endpoints at the host and port definded in the hydra config section *tracking*. By default the host is **127.0.0.1** and the port is **8080**.
 
