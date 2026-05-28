@@ -21,9 +21,12 @@
 Я воспользуюсь датасетом [Hymenoptera](https://www.kaggle.com/datasets/thedatasith/hymenoptera/data), опубликованным 
 [Francisco Zabala](https://www.kaggle.com/thedatasith) в 2022 году на платформе Kaggle.
 Этот датасет создавался для задачи классификации цветных изображений насекомых на муравьев и пчел.
+
 Примеры данных:
-+ Класс 0, муравей: ![ant example](assets/ant_example.jpg)
-+ Класс 1, пчела: ![bee example](assets/bee_example.jpg)
++ Класс 0, муравей:
+![ant example](assets/ant_example.jpg)
++ Класс 1, пчела:
+![bee example](assets/bee_example.jpg)
 В исходном датасете разрешения изображений варьируются в следующих диапазонах:
 + train
 	+ 0 (*ants*)
