@@ -1,6 +1,7 @@
 ![cover](assets/cover.jpg)
 # Hymenoptera-DINO-cls
 <hr>
+
 ##### Григорян Владислав Артурович
 ## Постановка задачи
 1. Разработать модель для классификации изображений из датасета Hymenoptera на классы муравьев и пчел
@@ -23,10 +24,10 @@
 Этот датасет создавался для задачи классификации цветных изображений насекомых на муравьев и пчел.
 
 Примеры данных:
-+ Класс 0, муравей
++ Класс 0, муравей:
 
 ![ant example](assets/ant_example.jpg)
-+ Класс 1, пчела
++ Класс 1, пчела:
 
 ![bee example](assets/bee_example.jpg)
 
@@ -85,14 +86,16 @@ Detection in Ants and Bees Images](https://mail.joiv.org/index.php/joiv/article/
 <hr>
 
 ## Setup
+`git clone git@github.com:massifsurfer/hymenoptera_dino_cls.git` - install the project's code to your machine.
 `uv sync` - install all the dependencies.
 
 ## Train
 `uv run src/train.py` - strat training process with the parameters given in the hydra config sections *dataset* and *model*.
 
-## MLFlow serving
+## Overall
+### MLFlow serving
 `uv run src/scripts/run_server` - run MLFlow Serving endpoints at the host and port definded in the hydra config section *tracking*. By default the host is **127.0.0.1** and the port is **8080**.
 
-## GUI inference
+### GUI inference
 `uv run streamlit run src/scripts/run_gui.py` - run streamlit GUI for manual access to the inference endpoint. By default GUI runs on host **127.0.0.1** and port **8501** - check your console output for the actual URL.
 
