@@ -23,6 +23,30 @@ from data.transforms import get_val_transform
     config_name="config",
 )
 def run_streamlit_server(cfg):
+    """Launches a Streamlit web interface for interactive image classification inference.
+
+    This function configures and serves a graphical user interface that allows users
+    to upload images and receive real-time classification results from a remote
+    inference server. It executes the following lifecycle steps:
+    1. Adjusts the system path to allow local package imports.
+    2. Initializes the Streamlit application layout, title, and page configurations.
+    3. Sets up validation image transformations and constructs the model serving
+       HTTP REST endpoint.
+    4. Provides a file upload interface restricted to preconfigured allowed file types.
+    5. Upon user submission, applies tensor transforms to the uploaded image and
+       constructs a JSON payload with a batched NumPy array.
+    6. Dispatches a POST request to the remote inference server and handles
+       network exceptions or server errors.
+    7. Decodes the classification logits, computes the confidence score via a
+       sigmoid function, and renders interactive progress indicators.
+    8. Flags the predicted category (e.g., ant or bee) based on a configured
+       decision threshold.
+
+    Args:
+        cfg (DictConfig): A Hydra configuration object containing interface rules,
+            network host/port configurations, transform criteria, and decision thresholds.
+    """
+
     st.set_page_config(page_title="HymenopteraDINOv3🐜🐝🦖", page_icon="🦖")
     st.title("HymenopteraDINOv3🐜🐝🦖\nImage classificator")
 
@@ -37,7 +61,7 @@ def run_streamlit_server(cfg):
         image = Image.open(uploaded_file).convert("RGB")
         st.image(image, caption="Загруженная картинка", use_container_width=True)
 
-        if st.button("Предсказать класс 🔮🧙", type="primary"):
+        if st.button("Предсказать класс 🔎", type="primary"):
             with st.spinner("Запрос отправлен..."):
                 try:
                     tensor_numpy = transform(image).cpu().numpy()
@@ -63,9 +87,9 @@ def run_streamlit_server(cfg):
                         st.progress(probability)
 
                         if probability > cfg.model.threshold:
-                            st.warning("⚠️ Обнаружен пчол!")
+                            st.info("🐝 Обнаружен пчол!")
                         else:
-                            st.info("✅ Это муравей!")
+                            st.info("🐜 Это муравей!")
 
                     else:
                         st.error(

@@ -4,6 +4,12 @@ from torch.utils.data import Dataset
 
 
 class HymenopteraDataset(Dataset):
+    """PyTorch Dataset for loading Hymenoptera image data from Parquet files.
+
+    Reads file paths and class labels using Polars, loads images on the fly
+    via PIL, and optionally applies data transformations.
+    """
+
     def __init__(self, df_path: str, transform=None):
         self.df = pl.read_parquet(df_path)
         self.transform = transform

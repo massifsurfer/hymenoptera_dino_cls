@@ -12,35 +12,48 @@ import hydra
     config_name="config",
 )
 def run_mlflow_server(cfg):
+    """Initializes and hosts a local MLflow REST server to serve a registered ONNX model.
+
+    This function sets up the required environment and spawns an interactive model
+    serving subprocess:
+    1. Locates the persistent SQLite database file relative to the project root
+       directory.
+    2. Overrides the `MLFLOW_TRACKING_URI` environment variable to point to the
+       resolved SQLite database string.
+    3. Validates the existence of the database file and terminates with an error
+       code if missing.
+    4. Resolves the model deployment URI using the model registry name and the
+       "latest" version tag.
+    5. Assembles and executes a shell command to spin up the MLflow native serving
+       infrastructure with disabled Conda environment instantiation.
+    6. Captures user interruption sequences (CTRL+C) and subprocess execution
+       faults gracefully.
+
+    Args:
+        cfg (DictConfig): A Hydra configuration object containing network host,
+            port configurations, and the target registered model token.
+    """
+
     print("=== MLflow Serving initialization ===")
 
-    # 1. Вычисляем абсолютный путь к корню вашего проекта.
-    # resolve().parent берет папку, в которой физически лежит этот файл run_server.py.
     project_root = Path(__file__).parent.parent.parent
     absolute_db_path = project_root / "mlflow.db"
 
-    # 2. Формируем правильный абсолютный URI для SQLite под Linux (с 4 косыми чертами)
     target_db_uri = f"sqlite:////{absolute_db_path}"
 
-    # 3. КРИТИЧЕСКИЙ ШАГ: фиксируем переменную окружения в контексте текущего процесса.
-    # Это единственный документированный способ заставить внутренний Uvicorn увидеть базу.
     os.environ["MLFLOW_TRACKING_URI"] = target_db_uri
 
-    # 4. Проверяем, существует ли физически файл базы данных
     if not absolute_db_path.exists():
         print(f"❌ DB doesn't exist: {absolute_db_path}")
         sys.exit(1)
 
-    # 5. Настройки модели и сети
     model_name = cfg.tracking.onnx_registered_model_name
-    model_version = "latest"  # Автоматически берет самую свежую версию модели
+    model_version = "latest"
     correct_model_uri = f"models:/{model_name}/{model_version}"
 
     host = cfg.tracking.host
     port = cfg.tracking.port
 
-    # 6. Собираем список аргументов строго по спецификации CLI 'mlflow models serve'
-    # Никаких лишних параметров вроде --backend-store-uri или --registry-store-uri!
     cmd = [
         "mlflow",
         "models",
@@ -51,7 +64,7 @@ def run_mlflow_server(cfg):
         host,
         "--port",
         port,
-        "--no-conda",  # Использует текущее окружение .venv (ускоряет запуск)
+        "--no-conda",
     ]
 
     print(f"🔗 Model's name in the registry: {model_name} ({model_version})")
@@ -59,8 +72,6 @@ def run_mlflow_server(cfg):
     print(f"🚀 Request endpoint: http://{host}:{port}/invocations")
     print("Нажмите CTRL+C для остановки сервера...\n")
 
-    # 7. Запускаем изолированный подпроцесс сервера
-    # stdout=None перенаправляет поток логов Uvicorn напрямую в вашу текущую консоль
     try:
         subprocess.run(cmd, check=True)
     except KeyboardInterrupt:

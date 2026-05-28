@@ -5,6 +5,7 @@ import hydra
 import mlflow
 import onnx
 import pytorch_lightning as L
+import tensorrt as trt
 import torch
 from faker import Faker
 from model.models import HymenopteraClassifier
@@ -28,25 +29,38 @@ def gen_fancy_name() -> str:
     config_name="config",
 )
 def train(cfg):
-    # 1. Настройка воспроизводимости (опционально)
+    """Trains a Hymenoptera image classifier and exports the best model to ONNX.
+
+    This function coordinates the full training pipeline using PyTorch Lightning,
+    Hydra, and MLflow. It performs the following steps:
+    1. Sets reproducibility seeds.
+    2. Initializes the data module, model, and MLflow logger.
+    3. Flattens and logs the full Hydra configuration to MLflow.
+    4. Trains the model while tracking the learning rate and saving the best
+       checkpoint based on validation loss.
+    5. Evaluates the best checkpoint on the test dataset if available.
+    6. Loads the best model weights and exports the model architecture to a
+       local ONNX file with dynamic batching.
+    7. Logs and registers the exported ONNX model artifact in MLflow with its
+       input/output signature.
+
+    Args:
+        cfg (DictConfig): A Hierarchical Hydra configuration object containing
+            all parameters for the dataset, model, tracking, and training process.
+    """
+
     L.seed_everything(cfg.seed)
 
-    # 2. Инициализация DataModule
     datamodule = HymenopteraDataModule(cfg)
 
-    # 3. Инициализация модели
     model = HymenopteraClassifier(cfg)
 
-    # 4. Настройка MLFlow Logger
-    # tracking_uri может быть локальной папкой "./mlruns" или адресом удаленного сервера
     mlflow_logger = MLFlowLogger(
         experiment_name=cfg.tracking.experiment_name,
         run_name=cfg.tracking.run_name_prefix + gen_fancy_name(),
         tracking_uri=cfg.tracking.uri,
     )
 
-    # Автоматически логируем весь OmegaConf конфиг как гиперпараметры в MLflow
-    # Превращаем в плоский словарь, чтобы MLflow корректно отображал вложенные структуры
     flat_config = OmegaConf.to_container(cfg, resolve=True)
 
     def flatten_dict(d, parent_key="", sep="."):
@@ -61,8 +75,6 @@ def train(cfg):
 
     mlflow_logger.log_hyperparams(flatten_dict(flat_config))
 
-    # 5. Настройка коллбэков
-    # Сохраняем лучшую модель по val_loss
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss",
         dirpath=os.path.join(".", cfg.tracking.checkpoint_dir),
@@ -71,13 +83,11 @@ def train(cfg):
         mode="min",
     )
 
-    # Автоматически логирует изменения Learning Rate от вашего CosineAnnealingLR
     lr_monitor = LearningRateMonitor(logging_interval="epoch")
 
-    # 6. Инициализация Trainer
     trainer = L.Trainer(
         max_epochs=cfg.model.max_epochs,
-        accelerator=cfg.model.accelerator,  # Автоматически выберет 'gpu' или 'cpu'
+        accelerator=cfg.model.accelerator,
         devices=1,
         logger=mlflow_logger,
         callbacks=[checkpoint_callback, lr_monitor],
@@ -85,48 +95,41 @@ def train(cfg):
         deterministic=True,
     )
 
-    # 7. Запуск обучения
     trainer.fit(model, datamodule=datamodule)
 
-    # 8. Тестирование на лучшем чекпоинте (если есть тестовый датасет)
     if datamodule.test_df_path.exists():
         trainer.test(model, datamodule=datamodule, ckpt_path="best", weights_only=False)
 
     print("Exporting to ONNX...")
 
-    # Загружаем лучшие веса из чекпоинта, который сохранил ModelCheckpoint
     best_model_path = checkpoint_callback.best_model_path
     best_model = HymenopteraClassifier.load_from_checkpoint(
         best_model_path, cfg=cfg, weights_only=False
     )
     best_model.eval()
-    best_model.to("cpu")  # Экспортировать безопаснее на CPU
+    best_model.to("cpu")
 
-    # Создаем dummy_input для определения структуры графа
     img_size = cfg.dataset.transforms.img_size
     dummy_input = torch.randn(1, 3, img_size, img_size)
 
-    # Генерируем локальный путь для сохранения
     onnx_dir = os.path.join(".", cfg.tracking.checkpoint_dir)
     os.makedirs(onnx_dir, exist_ok=True)
     local_onnx_path = os.path.join(onnx_dir, cfg.project_name + ".onnx")
 
-    # 9. Экспорт структуры графа PyTorch в ONNX файл (Исправленный вариант)
     torch.onnx.export(
         best_model,
         dummy_input,
         local_onnx_path,
         export_params=True,
-        opset_version=17,  # Теперь 17 применится успешно
+        opset_version=17,
         do_constant_folding=True,
         input_names=["input"],
         output_names=["output"],
-        dynamo=False,  # <--- КРИТИЧЕСКИЙ ФЛАГ: отключает проблемный Dynamo бэкенд
+        dynamo=False,
         dynamic_axes={"input": {0: "batch_size"}, "output": {0: "batch_size"}},
     )
     print(f"The model was succesfully saved locally: {local_onnx_path}")
 
-    # 10. Логирование ONNX-модели в MLflow (Исправленный вариант)
     if isinstance(trainer.logger, MLFlowLogger):
         with mlflow.start_run(run_id=trainer.logger.run_id):
             with torch.no_grad():
@@ -137,11 +140,59 @@ def train(cfg):
 
             mlflow.onnx.log_model(
                 onnx_model=onnx_model,
-                name=cfg.tracking.onnx_artifact_path,  # <--- Исправлено: заменили artifact_path на name
+                name=cfg.tracking.onnx_artifact_path,
                 signature=signature,
                 registered_model_name=cfg.tracking.onnx_registered_model_name,
             )
             print("ONNX model was registered in MLflow Artifacts.")
+
+    trt_dir = os.path.join(".", cfg.tracking.checkpoint_dir)
+    local_trt_path = os.path.join(trt_dir, cfg.project_name + ".engine")
+
+    if not torch.cuda.is_available():
+        print("\nℹ️ CUDA GPU не обнаружен в системе. Экспорт в TensorRT пропущен.")
+        print("Для процессоров (CPU) используйте готовую ONNX модель.")
+    else:
+        print(f"Compiling ONNX to TensorRT engine via Python API: {local_trt_path}...")
+        try:
+            torch.cuda.init()
+            _ = torch.tensor([1.0]).cuda()
+
+            logger = trt.Logger(trt.Logger.WARNING)
+            builder = trt.Builder(logger)
+            config = builder.create_builder_config()
+
+            config.set_flag(trt.BuilderFlag.FP16)
+
+            network_flags = 1 << int(trt.NetworkDefinitionCreationFlag.EXPLICIT_BATCH)
+            network = builder.create_network(network_flags)
+            parser = trt.OnnxParser(network, logger)
+
+            with open(local_onnx_path, "rb") as model_file:
+                if not parser.parse(model_file.read()):
+                    print("\n❌ Ошибка парсинга ONNX файла для TensorRT:")
+                    for error in range(parser.num_errors):
+                        print(parser.get_error(error))
+                    raise RuntimeError("Failed to parse ONNX file.")
+
+            print("Building TensorRT engine...")
+            serialized_engine = builder.build_serialized_network(network, config)
+
+            if serialized_engine is None:
+                raise RuntimeError("Engine serialization failed.")
+
+            with open(local_trt_path, "wb") as f:
+                f.write(serialized_engine)
+
+            print(f"TensorRT Engine successfully built and saved to: {local_trt_path}")
+
+        except ImportError:
+            print(
+                "\n❌ Ошибка: Библиотека 'tensorrt' не установлена в Python-окружении."
+            )
+            print("Выполните: pip install tensorrt tensorrt-cu12")
+        except Exception as e:
+            print(f"\n❌ Ошибка компиляции TensorRT через Python API: {e}")
 
 
 if __name__ == "__main__":

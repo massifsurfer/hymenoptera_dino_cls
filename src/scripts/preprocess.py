@@ -11,6 +11,25 @@ import polars as pl
     config_name="config",
 )
 def preprocess_data(cfg):
+    """Downloads a dataset from Kaggle, generates stratified splits, and saves them as Parquet files.
+
+    This function automates the complete data preparation pipeline:
+    1. Downloads the raw dataset from Kaggle via kagglehub into a local folder.
+    2. Parses the subdirectories to build initial train and test Polars DataFrames
+       with explicit image paths and integer class labels.
+    3. Sets a global random seed for Polars to ensure deterministic sampling.
+    4. Extracts a stratified validation set from the initial training data by
+       sampling a uniform number of examples for each class.
+    5. Filters out the validation samples from the training set using an image path
+       exclusion filter.
+    6. Shuffles the final training, validation, and testing DataFrames independently
+       and exports each subset into serialized Parquet format.
+
+    Args:
+        cfg (DictConfig): A hierarchical Hydra configuration object containing Kaggle
+            identifiers, dataset schemas, folder structures, split tokens, and metrics.
+    """
+
     local_download_path = Path(cfg.dataset.raw_dir)
     local_download_path.mkdir(parents=True, exist_ok=True)
     print(f"Downloading {cfg.dataset.kaggle_id} from Kaggle...")
@@ -66,10 +85,12 @@ def preprocess_data(cfg):
     val_df = pl.concat(val_chunks)
     train_df = initial_train_df.filter(~pl.col("path").is_in(val_df["path"].to_list()))
 
-    train_df.write_parquet(preprocessed_data_dir / cfg.dataset.df.train)
-    val_df.write_parquet(preprocessed_data_dir / cfg.dataset.df.val)
-    test_df.write_parquet(preprocessed_data_dir / cfg.dataset.df.test)
-
-
-# if __name__ == "__main__":
-#     preprocess_data()
+    train_df.sample(fraction=1.0, shuffle=True).write_parquet(
+        preprocessed_data_dir / cfg.dataset.df.train
+    )
+    val_df.sample(fraction=1.0, shuffle=True).write_parquet(
+        preprocessed_data_dir / cfg.dataset.df.val
+    )
+    test_df.sample(fraction=1.0, shuffle=True).write_parquet(
+        preprocessed_data_dir / cfg.dataset.df.test
+    )

@@ -9,6 +9,12 @@ from .transforms import get_train_transform, get_val_transform
 
 
 class HymenopteraDataModule(L.LightningDataModule):
+    """LightningDataModule for managing Hymenoptera image classification subsets.
+
+    Handles dataset paths, applies distinct train/validation transforms, and
+    instantiates DataLoaders for the training, validation, and testing stages.
+    """
+
     def __init__(self, cfg: DictConfig):
         super().__init__()
         self.cfg = cfg
