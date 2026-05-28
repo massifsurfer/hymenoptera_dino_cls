@@ -94,6 +94,7 @@ Detection in Ants and Bees Images](https://mail.joiv.org/index.php/joiv/article/
 
 ## Overall
 Project's structure:
+```text
 .
 ├── src
 │   ├── data
@@ -126,6 +127,7 @@ Project's structure:
 ├── pyproject.toml
 ├── README.md
 └── uv.lock
+```
 ### MLFlow serving
 `uv run src/scripts/run_server` - run MLFlow Serving endpoints at the host and port definded in the hydra config section *tracking*. By default the host is **127.0.0.1** and the port is **8080**.
 
