@@ -128,6 +128,7 @@ def train(cfg):
     print(f"The model was succesfully saved locally: {local_onnx_path}")
 
     if isinstance(trainer.logger, MLFlowLogger):
+        mlflow.set_tracking_uri(cfg.tracking.uri)
         with mlflow.start_run(run_id=trainer.logger.run_id):
             with torch.no_grad():
                 dummy_output = best_model(dummy_input).numpy()

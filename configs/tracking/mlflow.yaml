@@ -1,6 +1,6 @@
 experiment_name: "hymenoptera_dinov3_cls"
 run_name_prefix: "run_"
-uri: "sqlite:///mlflow.db"
+backend_uri: "sqlite:///mlflow.db"
 checkpoint_dir: "checkpoints"
 log_every_n_steps: 2
 best_model_name: "hymenoptera_dinov3_cls.onnx"
@@ -11,3 +11,4 @@ port: "8080"
 model_uri: "models:/Hymenoptera_DINOv3_CLS_ONNX/latest"
 allowed_types: ["jpg", "jpeg", "png"]
 plots_dir: "plots"
+uri: "http://${.host}:${.port}"
