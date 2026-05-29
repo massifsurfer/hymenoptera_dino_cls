@@ -7,20 +7,13 @@ import onnx
 import pytorch_lightning as L
 import tensorrt as trt
 import torch
-from faker import Faker
 from model.models import HymenopteraClassifier
 from omegaconf import OmegaConf
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import MLFlowLogger
+from utils import gen_fancy_name, get_git_commit_id, save_mlflow_plots
 
 from data.datamodules import HymenopteraDataModule
-
-
-def gen_fancy_name() -> str:
-    fake = Faker()
-    words = fake.words(nb=2)
-    name = "_".join(words)
-    return name
 
 
 @hydra.main(
@@ -59,6 +52,7 @@ def train(cfg):
         experiment_name=cfg.tracking.experiment_name,
         run_name=cfg.tracking.run_name_prefix + gen_fancy_name(),
         tracking_uri=cfg.tracking.uri,
+        tags={"mlflow.source.git.commit": get_git_commit_id()},
     )
 
     flat_config = OmegaConf.to_container(cfg, resolve=True)
@@ -100,6 +94,9 @@ def train(cfg):
     if datamodule.test_df_path.exists():
         trainer.test(model, datamodule=datamodule, ckpt_path="best", weights_only=False)
 
+    print("📉 Saving plots...")
+    save_mlflow_plots(trainer.logger.run_id, output_dir=cfg.tracking.plots_dir)
+
     print("Exporting to ONNX...")
 
     best_model_path = checkpoint_callback.best_model_path
@@ -107,7 +104,7 @@ def train(cfg):
         best_model_path, cfg=cfg, weights_only=False
     )
     best_model.eval()
-    best_model.to("cpu")
+    best_model.to(cfg.model.accelerator)
 
     img_size = cfg.dataset.transforms.img_size
     dummy_input = torch.randn(1, 3, img_size, img_size)
