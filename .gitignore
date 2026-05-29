@@ -232,3 +232,4 @@ mlruns/
 # Model artifacts
 checkpoints/
 plots/
+/checkpoints

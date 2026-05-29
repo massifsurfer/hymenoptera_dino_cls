@@ -1,4 +1,3 @@
-import os
 from pathlib import Path
 
 import hydra
@@ -32,10 +31,12 @@ def train(cfg):
     4. Trains the model while tracking the learning rate and saving the best
        checkpoint based on validation loss.
     5. Evaluates the best checkpoint on the test dataset if available.
-    6. Loads the best model weights and exports the model architecture to a
+    6. Saves the plots to local storage.
+    7. Loads the best model weights and exports the model architecture to a
        local ONNX file with dynamic batching.
-    7. Logs and registers the exported ONNX model artifact in MLflow with its
+    8. Logs and registers the exported ONNX model artifact in MLflow with its
        input/output signature.
+    9. Creates TensorRT version of the model.
 
     Args:
         cfg (DictConfig): A Hierarchical Hydra configuration object containing
@@ -69,9 +70,11 @@ def train(cfg):
 
     mlflow_logger.log_hyperparams(flatten_dict(flat_config))
 
+    checkpoint_dir = Path(".") / cfg.tracking.checkpoint_dir
+
     checkpoint_callback = ModelCheckpoint(
         monitor="val_loss",
-        dirpath=os.path.join(".", cfg.tracking.checkpoint_dir),
+        dirpath=str(checkpoint_dir),
         filename="best-checkpoint-{epoch:02d}-{val_loss:.4f}",
         save_top_k=1,
         mode="min",
@@ -109,14 +112,14 @@ def train(cfg):
     img_size = cfg.dataset.transforms.img_size
     dummy_input = torch.randn(1, 3, img_size, img_size)
 
-    onnx_dir = os.path.join(".", cfg.tracking.checkpoint_dir)
-    os.makedirs(onnx_dir, exist_ok=True)
-    local_onnx_path = os.path.join(onnx_dir, cfg.project_name + ".onnx")
+    onnx_dir = Path(".") / cfg.tracking.checkpoint_dir
+    onnx_dir.mkdir(parents=True, exist_ok=True)
+    local_onnx_path = onnx_dir / f"{cfg.project_name}.onnx"
 
     torch.onnx.export(
         best_model,
         dummy_input,
-        local_onnx_path,
+        str(local_onnx_path),
         export_params=True,
         opset_version=17,
         do_constant_folding=True,
@@ -134,7 +137,7 @@ def train(cfg):
                 dummy_output = best_model(dummy_input).numpy()
 
             signature = mlflow.models.infer_signature(dummy_input.numpy(), dummy_output)
-            onnx_model = onnx.load(local_onnx_path)
+            onnx_model = onnx.load(str(local_onnx_path))
 
             mlflow.onnx.log_model(
                 onnx_model=onnx_model,
@@ -144,8 +147,8 @@ def train(cfg):
             )
             print("ONNX model was registered in MLflow Artifacts.")
 
-    trt_dir = os.path.join(".", cfg.tracking.checkpoint_dir)
-    local_trt_path = os.path.join(trt_dir, cfg.project_name + ".engine")
+    trt_dir = Path(".") / cfg.tracking.checkpoint_dir
+    local_trt_path = trt_dir / f"{cfg.project_name}.engine"
 
     if not torch.cuda.is_available():
         print("\nℹ️ CUDA GPU не обнаружен в системе. Экспорт в TensorRT пропущен.")
