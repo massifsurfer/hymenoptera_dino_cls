@@ -1,7 +1,7 @@
 experiment_name: "hymenoptera_dinov3_cls"
 run_name_prefix: "run_"
 backend_uri: "sqlite:///mlflow.db"
-checkpoint_dir: "checkpoints/models"
+checkpoint_dir: "checkpoints"
 log_every_n_steps: 2
 best_model_name: "hymenoptera_dinov3_cls.onnx"
 onnx_artifact_path: "hymenoptera_dinov3_cls_onnx"
@@ -12,3 +12,7 @@ model_uri: "models:/Hymenoptera_DINOv3_CLS_ONNX/latest"
 allowed_types: ["jpg", "jpeg", "png"]
 plots_dir: "plots"
 uri: "http://${.host}:${.port}"
+inference:
+  host: "127.0.0.1"
+  port: "9080"
+  endpoint: "http://${.host}:${.port}/invocations"

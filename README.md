@@ -116,10 +116,17 @@ Detection in Ants and Bees Images](https://mail.joiv.org/index.php/joiv/article/
 
 `git clone git@github.com:massifsurfer/hymenoptera_dino_cls.git` - install the project's code to your machine.
 `uv sync` - install all the dependencies.
+`uv run -m src.scripts.run_tracking` - run the tracking server on host 127.0.0.1 and port 8080 as it is stated in the task.
 
 ## Train
 
-`uv run src/train.py` - strat training process with the parameters given in the hydra config sections _dataset_ and _model_.
+`uv run commands.py train` - strat training process with the parameters given in the hydra config sections _dataset_ and _model_.
+
+## Infer
+
+`uv run -m src.scripts.run_server` - run MLFlow Serving for providing inference endpoint, by default it is `http://127.0.0.1:9080/invocations`.
+`uv run commands.py infer <IMAGE_PATH>` - run the inference process for a single image.
+`uv run streamlit run src/scripts/run_gui.py` - run streamlit GUI for using the model in your browser. By default it is hosted at `http://127.0.0.1:8501/`.
 
 ## Overall
 

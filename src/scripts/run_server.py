@@ -51,9 +51,6 @@ def run_mlflow_server(cfg):
     model_version = "latest"
     correct_model_uri = f"models:/{model_name}/{model_version}"
 
-    host = cfg.tracking.host
-    port = cfg.tracking.port
-
     cmd = [
         "mlflow",
         "models",
@@ -61,15 +58,15 @@ def run_mlflow_server(cfg):
         "-m",
         correct_model_uri,
         "--host",
-        host,
+        cfg.tracking.inference.host,
         "--port",
-        port,
+        cfg.tracking.inference.port,
         "--no-conda",
     ]
 
     print(f"🔗 Model's name in the registry: {model_name} ({model_version})")
     print(f"🗄️ The db's path: {os.environ['MLFLOW_TRACKING_URI']}")
-    print(f"🚀 Request endpoint: http://{host}:{port}/invocations")
+    print(f"🚀 Request endpoint: {cfg.tracking.inference.endpoint}")
     print("Нажмите CTRL+C для остановки сервера...\n")
 
     try:

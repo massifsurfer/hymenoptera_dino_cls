@@ -1,18 +1,16 @@
-import os
 import sys
 from pathlib import Path
 
 import hydra
-import numpy as np
 import requests
 import streamlit as st
-import torch
 from PIL import Image
 
-parent_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+parent_dir = Path(__file__).resolve().parents[1]
+if str(parent_dir) not in sys.path:
+    sys.path.insert(0, str(parent_dir))
 
-if parent_dir not in sys.path:
-    sys.path.insert(0, parent_dir)
+from infer import infer
 
 from data.transforms import get_val_transform
 
@@ -33,25 +31,17 @@ def run_streamlit_server(cfg):
     3. Sets up validation image transformations and constructs the model serving
        HTTP REST endpoint.
     4. Provides a file upload interface restricted to preconfigured allowed file types.
-    5. Upon user submission, applies tensor transforms to the uploaded image and
-       constructs a JSON payload with a batched NumPy array.
-    6. Dispatches a POST request to the remote inference server and handles
-       network exceptions or server errors.
-    7. Decodes the classification logits, computes the confidence score via a
-       sigmoid function, and renders interactive progress indicators.
-    8. Flags the predicted category (e.g., ant or bee) based on a configured
-       decision threshold.
+    5. Upon user submission, invokes the decoupled inference routine and renders
+       interactive progress indicators and prediction classes.
 
     Args:
         cfg (DictConfig): A Hydra configuration object containing interface rules,
             network host/port configurations, transform criteria, and decision thresholds.
     """
-
     st.set_page_config(page_title="HymenopteraDINOv3🐜🐝🦖", page_icon="🦖")
     st.title("HymenopteraDINOv3🐜🐝🦖\nImage classificator")
 
     transform = get_val_transform(cfg.dataset.transforms)
-    endpoint = f"http://{cfg.tracking.host}:{cfg.tracking.port}/invocations"
 
     uploaded_file = st.file_uploader(
         "Выбери изображение...", type=list(cfg.tracking.allowed_types)
@@ -64,40 +54,26 @@ def run_streamlit_server(cfg):
         if st.button("Предсказать класс 🔎", type="primary"):
             with st.spinner("Запрос отправлен..."):
                 try:
-                    tensor_numpy = transform(image).cpu().numpy()
-                    payload = {"inputs": np.expand_dims(tensor_numpy, axis=0).tolist()}
+                    probability = infer(
+                        image, cfg.tracking.inference.endpoint, transform
+                    )
 
-                    response = requests.post(endpoint, json=payload, timeout=10)
+                    st.success("Ответ успешно получен!")
+                    st.metric(
+                        label="Вероятность положительного класса",
+                        value=f"{probability:.2%}",
+                    )
+                    st.progress(probability)
 
-                    if response.status_code == 200:
-                        logits = response.json()["predictions"]
-                        output = (
-                            logits["output"] if isinstance(logits, dict) else logits
-                        )
-
-                        probability = float(torch.sigmoid(torch.tensor(output)).item())
-
-                        st.success("Ответ успешно получен!")
-
-                        st.metric(
-                            label="Вероятность положительного класса",
-                            value=f"{probability:.2%}",
-                        )
-
-                        st.progress(probability)
-
-                        if probability > cfg.model.threshold:
-                            st.info("🐝 Обнаружен пчол!")
-                        else:
-                            st.info("🐜 Это муравей!")
-
+                    if probability > cfg.model.threshold:
+                        st.info("🐝 Обнаружен пчол!")
                     else:
-                        st.error(
-                            f"Ошибка сервера (Код {response.status_code}): {response.text}"
-                        )
+                        st.info("🐜 Это муравей!")
 
                 except requests.exceptions.RequestException as e:
                     st.error(f"Не удалось связаться с сервером инференса: {e}")
+                except RuntimeError as e:
+                    st.error(str(e))
 
 
 if __name__ == "__main__":

@@ -6,13 +6,13 @@ import onnx
 import pytorch_lightning as L
 import tensorrt as trt
 import torch
-from model.models import HymenopteraClassifier
 from omegaconf import OmegaConf
 from pytorch_lightning.callbacks import LearningRateMonitor, ModelCheckpoint
 from pytorch_lightning.loggers import MLFlowLogger
-from utils import gen_fancy_name, get_git_commit_id, save_mlflow_plots
 
-from data.datamodules import HymenopteraDataModule
+from .data.datamodules import HymenopteraDataModule
+from .model.models import HymenopteraClassifier
+from .utils import gen_fancy_name, get_git_commit_id, save_mlflow_plots
 
 
 @hydra.main(
