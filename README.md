@@ -166,11 +166,3 @@ Project's structure:
 ├── README.md
 └── uv.lock
 ```
-
-### MLFlow serving
-
-`uv run src/scripts/run_server` - run MLFlow Serving endpoints at the host and port definded in the hydra config section _tracking_. By default the host is **127.0.0.1** and the port is **8080**.
-
-### GUI inference
-
-`uv run streamlit run src/scripts/run_gui.py` - run streamlit GUI for manual access to the inference endpoint. By default GUI runs on host **127.0.0.1** and port **8501** - check your console output for the actual URL.
