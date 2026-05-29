@@ -2,7 +2,7 @@ import sys
 
 import fire
 import hydra
-from dvc.cli import main as dvc_main  # Native DVC CLI invocation from Python code
+from dvc.cli import main as dvc_main
 from PIL import Image
 
 from src import get_val_transform

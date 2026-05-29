@@ -1,7 +1,6 @@
 defaults:
   - dataset: hymenoptera
   - model: dinov3
-  - server: default
   - tracking: mlflow
   - _self_
 
